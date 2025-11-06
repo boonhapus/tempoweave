@@ -1,0 +1,23 @@
+from typing import Annotated, TypedDict
+
+
+type SpotifyIDT = Annotated[str, "A base-62 identifier found at the end of the Spotify URI."]
+type SpotifyURIT = Annotated[str, "Takes the format 'spotify:<resource_type>:<spotify_id>'."]
+type SpotifyURLT = Annotated[str, "Takes the format 'http://open.spotify.com/<resource_type>/<spotify_id>'"]
+
+
+class SpotifyAuthInfoT(TypedDict):
+    access_token: str
+    token_type: str
+    expires_in: int
+    refresh_token: str
+    scope: str
+    expires_at: int
+
+
+__all__ = (
+    "SpotifyIDT",
+    "SpotifyURIT",
+    "SpotifyURLT",
+    "SpotifyAuthInfoT",
+)
