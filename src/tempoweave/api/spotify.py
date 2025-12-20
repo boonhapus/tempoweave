@@ -1,26 +1,20 @@
-from typing import Any
-
 from urllib.parse import urlparse
 import functools as ft
 import logging
-import pathlib
-import tempfile
 
 from spotipy.oauth2 import SpotifyClientCredentials
-import librosa
-import numpy as np
 import spotipy
-import yt_dlp
 
-from tempoplay.const import ONE_MINUTE_IN_MILLISECONDS
-from tempoplay.types import SpotifyIDT, SpotifyURIT, SpotifyURLT
-from tempoplay.schema import Song
+from tempoweave.const import ONE_MINUTE_IN_MILLISECONDS
+from tempoweave.types import SpotifyIDT, SpotifyURIT, SpotifyURLT
+from tempoweave.schema import Song
+from tempoweave.audio.analysis import estimate_tempo_from_yt
 
 logger = logging.getLogger(__name__)
 
 
-class SongFetcher:
-    """Fetches information about Songs."""
+class SpotifyAPIClient:
+    """Fetches information about Songs from Spotify."""
 
     def __init__(self, spotify_auth: SpotifyClientCredentials):
         self.spotify = spotipy.Spotify(client_credentials_manager=spotify_auth)
@@ -37,36 +31,6 @@ class SongFetcher:
             resource_id = song_identity
 
         return resource_id
-
-    def estimate_tempo_from_yt(self, track_info: dict[str, Any], quiet: bool = False) -> int:
-        """Download the song from YT and estimate its tempo."""
-        try:
-            temp_dir = tempfile.gettempdir()
-            temp_mp3 = pathlib.Path(f"{temp_dir}/{track_info['id']}.mp3")
-
-            ydl_opts = {
-                "default_search": "ytsearch1:",
-                "outtmpl": temp_mp3.as_posix().replace(".mp3", ".%(ext)s"),
-                # choco install ffmpeg || pass the path to ffmpeg
-                # 'ffmpeg_location': r"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin",
-                "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
-                "quiet": quiet,
-            }
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                artist = track_info["artists"][0]["name"]
-                title  = track_info["name"]
-                ydl.download([f"{artist} {title}"])
-
-            # POST-PROCESS FOR TEMPO USING librosa.
-            song_data, sampling_rate = librosa.load(path=temp_mp3)
-            tempo, _ = librosa.beat.beat_track(y=song_data, sr=sampling_rate)
-            tempo = tempo.item() if isinstance(tempo, np.ndarray) else tempo
-            return int(tempo)
-
-        except Exception as e:
-            logger.exception(f"{e}")
-            return 0
 
     def is_song_on_spotify(self, song: Song) -> bool:
         """Determine if a song still exists on Spotify."""
@@ -91,9 +55,8 @@ class SongFetcher:
             title=track["name"],
             artist=track["artists"][0]["name"],
             album=track["album"]["name"],
-            tempo=self.estimate_tempo_from_yt(track),
+            tempo=estimate_tempo_from_yt(track),
             duration=track["duration_ms"] / ONE_MINUTE_IN_MILLISECONDS,
-            # genre="",
         )
 
         return song
@@ -110,6 +73,50 @@ class SongFetcher:
 
         for playlist_item in playlist["tracks"]["items"]:
             track_id = playlist_item["track"]["id"]
-            songs.append(self.get_song(track_id))
+            if track_id:
+                songs.append(self.get_song(track_id))
 
         return songs
+
+    def get_similar_songs(
+        self,
+        song: Song,
+        limit: int = 20,
+        target_tempo: int | None = None,
+        min_tempo: int | None = None,
+        max_tempo: int | None = None,
+    ) -> list[Song]:
+        """Fetch similar songs based on a seed song."""
+        SPOTIFY_MAX_PAGE_SIZE = 100
+
+        params = {
+            'seed_tracks': [song.track_id],
+            'limit': min(limit, SPOTIFY_MAX_PAGE_SIZE),
+        }
+
+        if target_tempo is not None:
+            params['target_tempo'] = target_tempo
+
+        if min_tempo is not None:
+            params['min_tempo'] = min_tempo
+
+        if max_tempo is not None:
+            params['max_tempo'] = max_tempo
+
+        results = self.spotify.recommendations(**params)
+
+        similar_songs: list[Song] = []
+
+        for track in results['tracks']:
+            similar_songs.append(
+                Song(
+                    track_id=track["id"],
+                    title=track["name"],
+                    artist=track["artists"][0]["name"],
+                    album=track["album"]["name"],
+                    tempo=estimate_tempo_from_yt(track),
+                    duration=track["duration_ms"] / ONE_MINUTE_IN_MILLISECONDS,
+                )
+            )
+
+        return similar_songs

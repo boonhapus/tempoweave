@@ -1,14 +1,17 @@
-from typing import Any, Literal
+"""Domain models for Tempoweave."""
+
 import datetime as dt
 import math
+from typing import Any, Literal
 
 import pydantic
 
-from tempoplay.types import SpotifyIDT
+from tempoweave.types import SpotifyIDT
 
 
 class SpotifyAuthInfo(pydantic.BaseModel):
     """Represents the information about a Spotify session."""
+
     access_token: pydantic.SecretStr
     token_type: str
     expires_in: int
@@ -68,7 +71,7 @@ class Song(pydantic.BaseModel):
         return f"spotify:track:{self.track_id}"
 
 
-class TempoPlaylistSettings(pydantic.BaseModel):
+class TempoweavePlaylistSettings(pydantic.BaseModel):
     """Represents the type of tempo playlist to build."""
 
     duration: pydantic.PositiveInt
@@ -112,7 +115,7 @@ class TempoPlaylistSettings(pydantic.BaseModel):
 
         if "h" in v:
             return int(float(v.replace("h", "")) * 60)
-        
+
         assert isinstance(v, int), f"'{v}' is not a valid duration shorthand"
 
         return v

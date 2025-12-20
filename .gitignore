@@ -8,3 +8,24 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+
+# Audio files (temporary downloads)
+*.mp3
+*.wav
+*.m4a
+
+# Log files
+*.log
+
+# IDE
+.vscode/
+.idea/
