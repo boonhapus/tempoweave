@@ -1,5 +1,3 @@
-"""Spotify API client."""
+from tempoweave.api.spotify import Spotify
 
-from tempoweave.api.spotify import SpotifyAPIClient
-
-__all__ = ["SpotifyAPIClient"]
+__all__ = ["Spotify"]

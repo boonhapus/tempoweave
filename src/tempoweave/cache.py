@@ -9,8 +9,7 @@ from sqlalchemy.orm import Session
 import sqlalchemy as sa
 
 from tempoweave.types import SpotifyAuthInfoT
-from tempoweave.schema import SpotifyAuthInfo
-from tempoweave.models import AuthToken, Base
+from tempoweave import models, schema
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +20,10 @@ class GitHubActionsCacheHandler(MemoryCacheHandler):
     def __init__(self, secret_key: str, db_engine: sa.engine.Engine):
         super().__init__()
         self.db_engine = db_engine
-        self.token_info: SpotifyAuthInfo | None = None
+        self.token_info: schema.SpotifyAuthInfo | None = None
         self._cipher = Fernet(key=secret_key.encode())
-        Base.metadata.create_all(self.db_engine)
+
+        models.Base.metadata.create_all(self.db_engine)
 
     def _public_token_info(self) -> SpotifyAuthInfoT:
         """Create a clear-text version of .token_info."""
@@ -43,7 +43,7 @@ class GitHubActionsCacheHandler(MemoryCacheHandler):
 
         try:
             with Session(bind=self.db_engine) as sess:
-                q = sa.select(AuthToken).order_by(AuthToken.expires_at.desc())
+                q = sa.select(models.SpotifyAuthInfo).order_by(models.SpotifyAuthInfo.expires_at.desc())
                 db_token = sess.execute(q).scalars().first()
 
                 if not db_token:
@@ -60,7 +60,7 @@ class GitHubActionsCacheHandler(MemoryCacheHandler):
                         token_data["refresh_token"].encode()
                     ).decode()
 
-                self.token_info = SpotifyAuthInfo.model_validate(token_data)
+                self.token_info = schema.SpotifyAuthInfo.model_validate(token_data)
                 logger.info("Loaded token from database.")
                 return self._public_token_info()
 
@@ -70,7 +70,7 @@ class GitHubActionsCacheHandler(MemoryCacheHandler):
 
     def save_token_to_cache(self, token: SpotifyAuthInfoT) -> None:
         """Store the token in memory and in the database."""
-        self.token_info = SpotifyAuthInfo.model_validate(token)
+        self.token_info = schema.SpotifyAuthInfo.model_validate(token)
 
         if extras := self.token_info.__pydantic_extra__:
             logger.warning(f"Extra data found on token: {extras}")
@@ -87,7 +87,7 @@ class GitHubActionsCacheHandler(MemoryCacheHandler):
                 ).decode()
 
             with Session(bind=self.db_engine) as sess:
-                new_token = AuthToken(**db_data)
+                new_token = models.SpotifyAuthInfo(**db_data)
                 sess.add(new_token)
                 sess.commit()
                 logger.info("Saved new token to database.")

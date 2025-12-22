@@ -9,7 +9,18 @@ import pydantic
 from tempoweave.types import SpotifyIDT
 
 
-class SpotifyAuthInfo(pydantic.BaseModel):
+class Base(pydantic.BaseModel):
+
+    model_config = pydantic.ConfigDict(
+        from_attributes=True,
+    )
+
+    def model_dump_no_extras(self) -> dict[str, Any]:
+        """Return a dictionary of the model's fields, excluding any extras."""
+        return {k: v for k, v in self.model_dump().items() if k in self.model_fields.keys()}
+
+
+class SpotifyAuthInfo(Base):
     """Represents the information about a Spotify session."""
 
     access_token: pydantic.SecretStr
@@ -30,7 +41,7 @@ class SpotifyAuthInfo(pydantic.BaseModel):
         return dt.datetime.fromtimestamp(self.expires_at)
 
 
-class Song(pydantic.BaseModel):
+class Song(Base):
     """Represents a song on Spotify."""
 
     track_id: SpotifyIDT
@@ -54,6 +65,19 @@ class Song(pydantic.BaseModel):
     genre: str | None = None
     """Primary genre of the song."""
 
+    last_verified: dt.datetime = pydantic.Field(default_factory=lambda: dt.datetime.now(tz=dt.timezone.utc))
+    """When this song was last verified against Spotify's API."""
+
+    @pydantic.computed_field
+    @property
+    def spotify_uri(self) -> str:
+        """Spotify URI of the song."""
+        return f"spotify:track:{self.track_id}"
+    
+    # ==========
+    # VALIDATORS
+    # ==========
+
     @pydantic.field_validator("tempo", mode="before")
     @classmethod
     def validate_round_precision_to_nearest_5(cls, v: float) -> float:
@@ -64,14 +88,8 @@ class Song(pydantic.BaseModel):
     def validate_limit_precision_to_one_decimal(cls, v: float) -> float:
         return round(number=v, ndigits=1)
 
-    @pydantic.computed_field
-    @property
-    def spotify_uri(self) -> str:
-        """Spotify URI of the song."""
-        return f"spotify:track:{self.track_id}"
 
-
-class TempoweavePlaylistSettings(pydantic.BaseModel):
+class TempoweavePlaylistSettings(Base):
     """Represents the type of tempo playlist to build."""
 
     duration: pydantic.PositiveInt

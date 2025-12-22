@@ -10,7 +10,7 @@ import yt_dlp
 logger = logging.getLogger(__name__)
 
 
-def estimate_tempo_from_yt(track_info: dict[str, Any], quiet: bool = False) -> int:
+def estimate_tempo_from_ytdl(track_info: dict[str, Any], quiet: bool = False) -> int:
     """Download the song from YT and estimate its tempo."""
     try:
         temp_dir = tempfile.gettempdir()

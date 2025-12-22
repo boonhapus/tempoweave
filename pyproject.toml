@@ -1,31 +1,26 @@
 [project]
 name = "tempoweave"
 version = "0.1.0"
-description = "Generate tempo-progressive Spotify playlists with intelligent BPM transitions"
+description = "Add your description here"
 readme = "README.md"
 authors = [
     { name = "boonhapus", email = "me@boonhap.us" }
 ]
 requires-python = ">=3.12"
-keywords = ["spotify", "playlist", "tempo", "bpm", "music", "audio-analysis"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Topic :: Multimedia :: Sound/Audio :: Analysis",
-    "Programming Language :: Python :: 3.12",
-]
 dependencies = [
-    "pydantic",
-    "pydantic-settings",
-    "spotipy",
-    "librosa",
-    "yt-dlp",
-    "sqlalchemy",
-    "cryptography",
-    "marimo",
-    "numpy",
+    "advanced-alchemy>=1.8.2",
+    "librosa>=0.11.0",
+    "pydantic>=2.12.5",
+    "spotipy>=2.25.2",
+    "sqlalchemy>=2.0",
+    "yt-dlp>=2025.12.8",
 ]
 
 [build-system]
-requires = ["uv_build>=0.8.13,<0.9.0"]
+requires = ["uv_build>=0.9.17,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "marimo>=0.18.4",
+]

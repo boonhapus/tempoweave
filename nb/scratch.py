@@ -1,13 +1,13 @@
 import marimo
 
-__generated_with = "0.17.7"
+__generated_with = "0.18.4"
 app = marimo.App(width="full")
 
 
 @app.cell
 def _():
     import marimo as mo
-    return (mo,)
+    return
 
 
 @app.cell
@@ -23,105 +23,71 @@ def _():
 
 @app.cell
 def _():
+    from spotipy.oauth2 import SpotifyClientCredentials
+
+    from tempoweave.api.spotify import SpotifyAPIClient
     from tempoweave.schema import Song
-    from tempoweave.playlist.generator import PlaylistCalculator, EasingType
-    return EasingType, PlaylistCalculator, Song
+    return SpotifyAPIClient, SpotifyClientCredentials
 
 
 @app.cell
-def _(Song):
-    # Create a sample library of songs with varying tempos
-    song_library = [
-        Song(track_id="1", title="Slow Start", artist="Artist A", album="Album 1", tempo=80, duration=3.5),
-        Song(track_id="2", title="Easy Going", artist="Artist B", album="Album 2", tempo=85, duration=4.0),
-        Song(track_id="3", title="Morning Vibe", artist="Artist C", album="Album 3", tempo=90, duration=3.8),
-        Song(track_id="4", title="Wake Up", artist="Artist D", album="Album 4", tempo=95, duration=3.2),
-        Song(track_id="5", title="Getting Started", artist="Artist E", album="Album 5", tempo=100, duration=4.1),
-        Song(track_id="6", title="Building Up", artist="Artist F", album="Album 6", tempo=105, duration=3.9),
-        Song(track_id="7", title="Moving Along", artist="Artist G", album="Album 7", tempo=110, duration=3.7),
-        Song(track_id="8", title="Mid Pace", artist="Artist H", album="Album 8", tempo=115, duration=4.3),
-        Song(track_id="9", title="Accelerate", artist="Artist I", album="Album 9", tempo=120, duration=3.4),
-        Song(track_id="10", title="Pushing Hard", artist="Artist J", album="Album 10", tempo=125, duration=3.6),
-        Song(track_id="11", title="High Energy", artist="Artist K", album="Album 11", tempo=130, duration=4.0),
-        Song(track_id="12", title="Peak Performance", artist="Artist L", album="Album 12", tempo=135, duration=3.3),
-        Song(track_id="13", title="Maximum Effort", artist="Artist M", album="Album 13", tempo=140, duration=3.8),
-        Song(track_id="14", title="Sprint Mode", artist="Artist N", album="Album 14", tempo=145, duration=3.5),
-        Song(track_id="15", title="All Out", artist="Artist O", album="Album 15", tempo=150, duration=3.2),
-    ]
-    return (song_library,)
+def _():
+    SPOTIFY_CLIENT_ID = "3684d516e73a49caadc2723b59d226c5"
+    SPOTIFY_SECRET_ID = "62200338b5934074898ec37738ff7b23"
+    return SPOTIFY_CLIENT_ID, SPOTIFY_SECRET_ID
 
 
 @app.cell
-def _(EasingType, PlaylistCalculator, song_library):
-    # Create a playlist calculator for a 30-minute workout
-    # Tempo progression: 80 BPM -> 150 BPM with linear easing
-    calculator = PlaylistCalculator(
-        total_duration=30.0,  # 30 minutes
-        low_tempo=80,
-        high_tempo=150,
-        easing_type=EasingType.LINEAR,
-        tempo_step=5
-    )
-
-    # Generate the optimized playlist
-    result = calculator.generate_playlist(
-        song_library=song_library,
-        max_iterations=1000,
-        allow_duplicates=False,
-        shuffle_within_ranges=True
-    )
-
-    return calculator, result
+def _(
+    SPOTIFY_CLIENT_ID,
+    SPOTIFY_SECRET_ID,
+    SpotifyAPIClient,
+    SpotifyClientCredentials,
+):
+    auth = SpotifyClientCredentials(client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_SECRET_ID)
+    api = SpotifyAPIClient(spotify_auth=auth)
+    return (api,)
 
 
 @app.cell
-def _(mo, result):
-    # Display the results
-    mo.md(f"""
-    ## Playlist Results
-
-    **Target Duration:** {result.target_duration:.1f} minutes
-    **Actual Duration:** {result.total_duration:.1f} minutes
-    **Fitness Score:** {result.fitness_score:.2%}
-    **Number of Songs:** {len(result.songs)}
-    """)
+def _(api):
+    api.get_song("https://open.spotify.com/track/1bdS7Ba4vaNaGywh5qiyUn?si=16424f465f744038")
     return
 
 
 @app.cell
-def _(mo, result):
-    # Show the playlist
-    playlist_data = [
-        {
-            "Title": song.title,
-            "Artist": song.artist,
-            "Tempo (BPM)": song.tempo,
-            "Duration (min)": song.duration
-        }
-        for song in result.songs
-    ]
-
-    mo.ui.table(playlist_data, label="Generated Playlist")
-    return (playlist_data,)
+def _(api):
+    songs = api.get_songs_from_playlist("https://open.spotify.com/playlist/2Iy2d4z9OyHc87gHaODDCa?si=6a0bcb3975484f6d")
+    songs
+    return (songs,)
 
 
 @app.cell
-def _(mo, result):
-    # Show tempo distribution analysis
-    distribution_data = [
-        {
-            "Tempo Range": f"{tempo_range.min_tempo}-{tempo_range.max_tempo} BPM",
-            "Required (min)": f"{dist['required_duration']:.1f}",
-            "Actual (min)": f"{dist['actual_duration']:.1f}",
-            "Songs": dist['song_count'],
-            "Deficit (min)": f"{dist['deficit']:.1f}"
-        }
-        for tempo_range, dist in result.tempo_distribution.items()
-    ]
+def _(songs):
+    tracks = "\n".join(f"{s.title} - {s.artist}" for s in songs)
+    prompt = f"""
+    Act as an expert musicologist and psychologist. I will provide a list of songs. Your goal is to extract the 'soul' of this playlist.
 
-    mo.md("## Tempo Distribution")
-    mo.ui.table(distribution_data, label="How well each tempo range is filled")
-    return (distribution_data,)
+    Please provide:
+
+        The Narrative Arc: If this playlist were a movie soundtrack, what kind of story would it be telling?
+
+        Subconscious Cues: Analyze the transition of moods. Is it a slow descent into sadness, or a high-energy build-up?
+
+        Target Sentiment: What is the listener likely feeling, or what headspace are they trying to enter by playing this?
+
+        The 'Outlier' Check: Identify if any song feels like it doesn't fit the theme and explain why.
+
+    Playlist:
+    {tracks}
+    """
+    print(prompt)
+    return
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":

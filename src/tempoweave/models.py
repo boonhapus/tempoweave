@@ -1,31 +1,75 @@
 """Database models for Tempoweave."""
+import datetime as dt
+from typing import Any, Self
 
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 import sqlalchemy as sa
 
-Base = declarative_base()
+from tempoweave import types, schema
 
 
-class AuthToken(Base):
-    """Database model for storing encrypted auth tokens."""
+class SchemaMixin:
+    """Mixin for pydantic.BaseModel schema conversion."""
+    __schema__: type[schema.Base]
 
-    __tablename__ = "auth_tokens"
+    def to_schema(self) -> schema.Base:
+        """Convert model to schema."""
+        return self.__schema__.model_validate(obj=self)
 
-    id = sa.Column(sa.Integer, primary_key=True)
-    access_token = sa.Column(sa.String, nullable=False)
-    token_type = sa.Column(sa.String)
-    expires_in = sa.Column(sa.Integer)
-    refresh_token = sa.Column(sa.String)
-    scope = sa.Column(sa.String)
-    expires_at = sa.Column(sa.Integer, index=True)
+    @classmethod
+    def validate_schema(cls, data: Any) -> Self:
+        """Validate the model against its schema."""
+        return cls.from_schema(obj=cls.__schema__.model_validate(obj=data))
 
-    def to_dict(self) -> dict[str, str | int | None]:
-        """Convert the model to a dictionary."""
-        return {
-            "access_token": self.access_token,
-            "token_type": self.token_type,
-            "expires_in": self.expires_in,
-            "refresh_token": self.refresh_token,
-            "scope": self.scope,
-            "expires_at": self.expires_at,
-        }
+    @classmethod
+    def from_schema(cls, obj: schema.Base) -> Self:
+        """Create model from schema."""
+        return cls(**obj.model_dump_no_extras())
+
+
+class Base(SchemaMixin, DeclarativeBase):
+    """Base class for all models."""
+    pass
+
+
+class SpotifyAuthInfo(Base):
+    """Authentication information for Spotify."""
+    __tablename__ = "spotify_auth_info"
+    __schema__ = schema.SpotifyAuthInfo
+
+    access_token: Mapped[str] = mapped_column(sa.String, primary_key=True)
+    token_type: Mapped[str] = mapped_column(sa.String)    
+    expires_in: Mapped[int] = mapped_column(sa.Integer)
+    refresh_token: Mapped[str | None] = mapped_column(sa.String)
+    scope: Mapped[str] = mapped_column(sa.String)
+    expires_at: Mapped[int] = mapped_column(sa.Integer)
+
+
+class Song(Base):
+    """A track in the Tempoweave database."""
+    __tablename__ = "song"
+    __schema__ = schema.Song
+
+    track_id: Mapped[types.SpotifyIDT] = mapped_column(sa.String, primary_key=True)
+    """Spotify track ID."""
+
+    title: Mapped[str] = mapped_column(sa.String)
+    """Song title."""
+
+    artist: Mapped[str] = mapped_column(sa.String)
+    """Primary artist."""
+
+    album: Mapped[str] = mapped_column(sa.String)
+    """Album the song is featured on."""
+
+    tempo: Mapped[int] = mapped_column(sa.Integer)
+    """Tempo in BPM."""
+
+    duration: Mapped[float] = mapped_column(sa.Float)
+    """The track length in minutes."""
+
+    genre: Mapped[str | None] = mapped_column(sa.String)
+    """Primary genre of the song."""
+
+    last_verified: Mapped[dt.datetime] = mapped_column(sa.DateTime)
+    """When the song was fetched from Spotify."""
