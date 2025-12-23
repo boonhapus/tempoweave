@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "advanced-alchemy>=1.8.2",
+    "cryptography>=46.0.3",
     "librosa>=0.11.0",
     "pydantic>=2.12.5",
     "spotipy>=2.25.2",

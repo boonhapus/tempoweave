@@ -1,6 +1,7 @@
 from typing import cast
 
 from advanced_alchemy.config import SQLAlchemySyncConfig
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from tempoweave import api, const, models, repo, schema, types
 
@@ -8,9 +9,9 @@ from tempoweave import api, const, models, repo, schema, types
 class Weaver:
     """A coordinator of songs."""
 
-    def __init__(self):
+    def __init__(self, spotify_auth: SpotifyClientCredentials):
         self.db_config = SQLAlchemySyncConfig(connection_string="sqlite:///.tempoweave_song_cache.db")
-        self.spotify = api.Spotify(client_credentials_manager=SpotifyClientCredentials)
+        self.spotify = api.Spotify(client_credentials_manager=spotify_auth)
         self.youtube = api.YouTube()
         # self.last_fm = api.LastFM()
 
@@ -39,10 +40,27 @@ class Weaver:
                 "duration": track["duration_ms"] / const.ONE_MINUTE_IN_MILLISECONDS,
             })
 
-            song_repo.add(data=song, auto_commit=True)
+            song_repo.upsert(data=song, auto_commit=True)
 
         return cast(typ=schema.Song, val=song.to_schema())
 
     def get_recommendations(self, song: schema.Song) -> list[schema.Song]:
         """Get similar songs to the given song."""
         return [song]
+
+    def get_songs_from_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT) -> list[schema.Song]:
+        """Fetch all songs from a playlist."""
+        playlist_id = self.spotify.get_spotify_id(spotify_playlist_identity)
+        playlist = self.spotify.playlist(playlist_id)
+
+        if playlist is None:
+            raise RuntimeError(f"Could not find a Playlist for '{spotify_playlist_identity}'")
+
+        songs: list[schema.Song] = []
+
+        for playlist_item in playlist["tracks"]["items"]:
+            if track_id := playlist_item["track"]["id"]:
+                songs.append(self.get_song(track_id))
+
+        return songs
+

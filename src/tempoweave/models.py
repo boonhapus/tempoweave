@@ -62,11 +62,11 @@ class Song(Base):
     album: Mapped[str] = mapped_column(sa.String)
     """Album the song is featured on."""
 
-    tempo: Mapped[int] = mapped_column(sa.Integer)
-    """Tempo in BPM."""
-
     duration: Mapped[float] = mapped_column(sa.Float)
     """The track length in minutes."""
+
+    tempo: Mapped[int | None] = mapped_column(sa.Integer)
+    """Tempo in BPM."""
 
     genre: Mapped[str | None] = mapped_column(sa.String)
     """Primary genre of the song."""

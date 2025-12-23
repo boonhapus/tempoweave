@@ -1,19 +1,15 @@
 from urllib.parse import urlparse
-import logging
 
-from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy
 
-from tempoweave.types import SpotifyIDT, SpotifyURIT, SpotifyURLT
-
-logger = logging.getLogger(__name__)
+from tempoweave import types
 
 
 class Spotify(spotipy.Spotify):
     """Fetches information about Songs from Spotify."""
 
     @staticmethod
-    def get_spotify_id(identity: SpotifyURIT | SpotifyURLT | SpotifyIDT) -> SpotifyIDT:
+    def get_spotify_id(identity: types.SpotifyIdentityT) -> types.SpotifyIDT:
         """Extract track or playlist ID from Spotify URI or URL."""
         if identity.startswith("spotify:"):
             *_, resource_id = identity.rpartition(":")
@@ -24,22 +20,6 @@ class Spotify(spotipy.Spotify):
             resource_id = identity
 
         return resource_id
-
-    # def get_songs_from_playlist(self, playlist_identity: SpotifyURIT | SpotifyURLT | SpotifyIDT) -> list[schema.Song]:
-    #     """Fetch all songs from a playlist."""
-    #     playlist_id = self.get_spotify_id(playlist_identity)
-    #     playlist = self.spotify.playlist(playlist_id)
-
-    #     if playlist is None:
-    #         raise RuntimeError(f"Could not find a Playlist for '{playlist_identity}'")
-
-    #     songs: list[schema.Song] = []
-
-    #     for playlist_item in playlist["tracks"]["items"]:
-    #         if track_id := playlist_item["track"]["id"]:
-    #             songs.append(self.get_song(track_id))
-
-    #     return songs
 
     # def get_similar_songs(
     #     self,
