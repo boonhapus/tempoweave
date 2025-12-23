@@ -1,19 +1,22 @@
 from typing import cast
+import logging
 
 from advanced_alchemy.config import SQLAlchemySyncConfig
 from spotipy.oauth2 import SpotifyClientCredentials
 
 from tempoweave import api, const, models, repo, schema, types
 
+logger = logging.getLogger(__name__)
+
 
 class Weaver:
     """A coordinator of songs."""
 
-    def __init__(self, spotify_auth: SpotifyClientCredentials):
+    def __init__(self, spotify_auth: SpotifyClientCredentials, last_fm_auth: dict[str, str]):
         self.db_config = SQLAlchemySyncConfig(connection_string="sqlite:///.tempoweave_song_cache.db")
         self.spotify = api.Spotify(client_credentials_manager=spotify_auth)
         self.youtube = api.YouTube()
-        # self.last_fm = api.LastFM()
+        self.last_fm = api.LastFM(**last_fm_auth)
 
         with self.db_config.get_engine().begin() as conn:
             models.Base.metadata.create_all(bind=conn)
@@ -44,9 +47,23 @@ class Weaver:
 
         return cast(typ=schema.Song, val=song.to_schema())
 
-    def get_recommendations(self, song: schema.Song) -> list[schema.Song]:
+    def get_recommendations(self, song: schema.Song, *, limit: int = 5) -> list[schema.Song]:
         """Get similar songs to the given song."""
-        return [song]
+
+        if not (similar_tracks := self.last_fm.get_similar_tracks(song, limit=limit)):
+            raise RuntimeError(f"Could not find a Song on LastFM for '{song.title}' [{song.artist}]")
+        
+        songs: list[schema.Song] = []
+
+        for similar in similar_tracks:
+            query = f"track:{similar['title']} artist:{similar['artist']}"
+
+            if data := self.spotify.search(q=query, limit=1, type="track"):
+                songs.append(self.get_song(spotify_track_identity=data["tracks"]["items"][0]["uri"]))
+            else:
+                logger.warning(f"Could not find a Song on Spotify for '{query}'")
+
+        return songs
 
     def get_songs_from_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT) -> list[schema.Song]:
         """Fetch all songs from a playlist."""
@@ -60,7 +77,6 @@ class Weaver:
 
         for playlist_item in playlist["tracks"]["items"]:
             if track_id := playlist_item["track"]["id"]:
-                songs.append(self.get_song(track_id))
+                songs.append(self.get_song(spotify_track_identity=track_id))
 
         return songs
-

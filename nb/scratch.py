@@ -34,25 +34,39 @@ def _():
 
 @app.cell
 def _(SpotifyClientCredentials, Weaver, os):
-    creds = SpotifyClientCredentials(
+    spot_creds = SpotifyClientCredentials(
         client_id=os.environ["SPOTIFY_CLIENT_ID"],
         client_secret=os.environ["SPOTIFY_CLIENT_SECRET"]
     )
 
-    weaver = Weaver(spotify_auth=creds)
+    last_creds = {
+        "api_key": os.environ["LAST_FM_API_KEY"],
+        "api_secret": os.environ["LAST_FM_API_SECRET"],
+    }
+
+    weaver = Weaver(spotify_auth=spot_creds, last_fm_auth=last_creds)
     return (weaver,)
 
 
 @app.cell
-def _(weaver):
-    weaver.get_song("https://open.spotify.com/track/1bdS7Ba4vaNaGywh5qiyUn?si=16424f465f744038")
+def _():
     return
 
 
 @app.cell
 def _(weaver):
-    songs = weaver.get_songs_from_playlist("https://open.spotify.com/playlist/2Iy2d4z9OyHc87gHaODDCa?si=6a0bcb3975484f6d")
-    songs
+    import pylast
+
+    _ = weaver.get_song("https://open.spotify.com/track/2HpzISgPZ8jydFcHSyMWVq?si=36bc43611423483b")
+
+    weaver.get_recommendations(_, limit=15)
+    return
+
+
+@app.cell
+def _():
+    # songs = weaver.get_songs_from_playlist("https://open.spotify.com/playlist/2Iy2d4z9OyHc87gHaODDCa?si=6a0bcb3975484f6d")
+    # songs
     return
 
 

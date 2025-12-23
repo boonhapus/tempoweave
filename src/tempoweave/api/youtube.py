@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class YouTube(yt_dlp.YoutubeDL):
+    """Fetches information about Songs from YouTube."""
     # DEV NOTE:
-    #  YT-DLP is essentially a command line interface, so some of the patterns below are
-    #  going to look a bit odd. YoutubeDL.download() physically downloads a file from
-    #  the YouTube service instead of interacting with it in memory.
+    #   YT-DLP is essentially a command line interface, so some of the patterns below
+    #   are going to look a bit odd. YoutubeDL.download() physically downloads a file
+    #   from the YouTube service instead of interacting with it in memory.
+    #
 
     def __init__(self, ffmpeg_location: pathlib.Path | None = None):
         params = {
