@@ -49,18 +49,17 @@ class Weaver:
 
     def get_recommendations(self, song: schema.Song, *, limit: int = 5) -> list[schema.Song]:
         """Get similar songs to the given song."""
-
-        songs: list[schema.Song] = []
+        recommendations: list[schema.Song] = []
 
         for similar in self.last_fm.get_similar_tracks(song, limit=limit):
             query = f"track:{similar['title']} artist:{similar['artist']}"
 
             if data := self.spotify.search(q=query, limit=1, type="track"):
-                songs.append(self.get_song(spotify_track_identity=data["tracks"]["items"][0]["uri"]))
+                recommendations.append(self.get_song(spotify_track_identity=data["tracks"]["items"][0]["uri"]))
             else:
                 logger.warning(f"Could not find a Song on Spotify for '{query}'")
 
-        return songs
+        return recommendations
 
     def get_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT) -> schema.Playlist:
         """Fetch all info from a playlist."""
