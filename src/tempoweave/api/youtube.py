@@ -3,10 +3,13 @@ import copy
 import logging
 import pathlib
 import tempfile
+import random
 
 import librosa
 import numpy as np
 import yt_dlp
+
+from tempoweave import const
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,8 @@ class YouTube(yt_dlp.YoutubeDL):
     def __init__(self, ffmpeg_location: pathlib.Path | None = None):
         params = {
             "default_search": "ytsearch1:",
+            "format": "bestaudio/best",
+            "force_keyframe_at_cuts": False,  # Prevent downloading extra data for accurate cutting.
             "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
         }
 
@@ -32,15 +37,24 @@ class YouTube(yt_dlp.YoutubeDL):
 
     def estimate_tempo(self, track_info: dict[str, Any], quiet: bool = False) -> int:
         """Download the song from YT and estimate its tempo."""
+        MIN_SEC_FOR_TEMPO_ESTIMATION = 30
+
+        # Calculate the boundaries for a song sample.
+        dur = (track_info["duration_ms"] / const.ONE_MINUTE_IN_MILLISECONDS)
+        beg = random.uniform(dur * 0.2, dur - MIN_SEC_FOR_TEMPO_ESTIMATION)
+
+        # Use track_info.id for a unique, stable filename
+        temp_mp3 = pathlib.Path(f"{tempfile.gettempdir()}/{track_info['id']}-sample.mp3")
+
         try:
             original_params = copy.deepcopy(self.params)
 
-            # Use track_info.id for a unique, stable filename
-            temp_mp3 = pathlib.Path(f"{tempfile.gettempdir()}/{track_info['id']}.mp3")
-
             # Update parameters to match given info
-            self.params["outtmpl"] = temp_mp3.as_posix().replace(".mp3", ".%(ext)s")
-            self.params["quiet"] = quiet
+            self.params.update({
+                "outtmpl": temp_mp3.as_posix().replace(".mp3", ".%(ext)s"),
+                "quiet": quiet,
+                "download_ranges": lambda *a: [{"start_time": beg, "end_time": beg + MIN_SEC_FOR_TEMPO_ESTIMATION}],
+            })
 
             # YoutubeDL.__init__() does this.. so we emulate it.
             self._parse_outtmpl()
