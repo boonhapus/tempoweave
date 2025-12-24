@@ -72,7 +72,7 @@ def _(weaver):
     return
 
 
-@app.cell
+@app.cell(disabled=True)
 def _(weaver):
     # THIS FLOW PERFORMS SENTIMENT ANALYSIS (via LLM) ON A GIVEN PLAYLIST.
     _p = "https://open.spotify.com/playlist/0wrWq4O6BAMFOhyOWDaKKd"
