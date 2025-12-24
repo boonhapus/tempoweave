@@ -25,18 +25,25 @@ def _():
 
 @app.cell
 def _():
-    from spotipy.oauth2 import SpotifyClientCredentials
+    from spotipy.oauth2 import SpotifyOAuth
 
     from tempoweave.weaver import Weaver
     from tempoweave.schema import Song
-    return SpotifyClientCredentials, Weaver
+    return SpotifyOAuth, Weaver
 
 
 @app.cell
-def _(SpotifyClientCredentials, Weaver, os):
-    spot_creds = SpotifyClientCredentials(
+def _(SpotifyOAuth, Weaver, os):
+    spot_creds = SpotifyOAuth(
         client_id=os.environ["SPOTIFY_CLIENT_ID"],
-        client_secret=os.environ["SPOTIFY_CLIENT_SECRET"]
+        client_secret=os.environ["SPOTIFY_CLIENT_SECRET"],
+        redirect_uri="https://127.0.0.1:8888/callback",
+        scope=" ".join([
+            "user-read-playback-state",
+            "user-modify-playback-state",
+            "playlist-modify-public",
+            "playlist-modify-private",
+        ])
     )
 
     last_creds = {
@@ -44,52 +51,49 @@ def _(SpotifyClientCredentials, Weaver, os):
         "api_secret": os.environ["LAST_FM_API_SECRET"],
     }
 
+    # MusicBrainz? MusicBrainz Labs?
+
     weaver = Weaver(spotify_auth=spot_creds, last_fm_auth=last_creds)
     return (weaver,)
 
 
 @app.cell
-def _():
+def _(weaver):
+    # THIS FLOW SHUFFLES A PLAYLIST BY FETCHING A RANDOM SONG ON IT, THEN REWRITING IT WITH SIMILAR SONGS
+    import random
+
+    _n = "https://open.spotify.com/playlist/0baOrekhXPa0YpUKgrDhs9"
+    _p = weaver.get_playlist(spotify_playlist_identity=_n)
+    _c = random.choice(_p.songs)
+    _s = weaver.get_recommendations(_c, limit=24)
+
+    weaver.set_playlist(spotify_playlist_identity=_p.playlist_id, songs=[_c, *_s])
+    weaver.get_playlist(spotify_playlist_identity=_p.playlist_id)
     return
 
 
 @app.cell
 def _(weaver):
-    import pylast
+    # THIS FLOW PERFORMS SENTIMENT ANALYSIS (via LLM) ON A GIVEN PLAYLIST.
+    _p = "https://open.spotify.com/playlist/0wrWq4O6BAMFOhyOWDaKKd"
+    _t = "\n".join(f"{s.title} - {s.artist}" for s in weaver.get_playlist(spotify_playlist_identity=_p).songs)
+    _q = f"""
+    Act as an expert musicologist and psychologist. I will provide a list of songs. Your goal is to extract the 'soul' of this playlist.
 
-    _ = weaver.get_song("https://open.spotify.com/track/2HpzISgPZ8jydFcHSyMWVq?si=36bc43611423483b")
+    Please provide:
 
-    weaver.get_recommendations(_, limit=15)
-    return
+        The Narrative Arc: If this playlist were a movie soundtrack, what kind of story would it be telling?
 
+        Subconscious Cues: Analyze the transition of moods. Is it a slow descent into sadness, or a high-energy build-up?
 
-@app.cell
-def _():
-    # songs = weaver.get_songs_from_playlist("https://open.spotify.com/playlist/2Iy2d4z9OyHc87gHaODDCa?si=6a0bcb3975484f6d")
-    # songs
-    return
+        Target Sentiment: What is the listener likely feeling, or what headspace are they trying to enter by playing this?
 
+        The 'Outlier' Check: Identify if any song feels like it doesn't fit the theme and explain why.
 
-@app.cell
-def _():
-    # tracks = "\n".join(f"{s.title} - {s.artist}" for s in songs)
-    # prompt = f"""
-    # Act as an expert musicologist and psychologist. I will provide a list of songs. Your goal is to extract the 'soul' of this playlist.
-
-    # Please provide:
-
-    #     The Narrative Arc: If this playlist were a movie soundtrack, what kind of story would it be telling?
-
-    #     Subconscious Cues: Analyze the transition of moods. Is it a slow descent into sadness, or a high-energy build-up?
-
-    #     Target Sentiment: What is the listener likely feeling, or what headspace are they trying to enter by playing this?
-
-    #     The 'Outlier' Check: Identify if any song feels like it doesn't fit the theme and explain why.
-
-    # Playlist:
-    # {tracks}
-    # """
-    # print(prompt)
+    Playlist:
+    {_t}
+    """
+    print(_q)
     return
 
 

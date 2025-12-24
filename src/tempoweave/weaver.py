@@ -2,7 +2,7 @@ from typing import cast
 import logging
 
 from advanced_alchemy.config import SQLAlchemySyncConfig
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 
 from tempoweave import api, const, models, repo, schema, types
 
@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 class Weaver:
     """A coordinator of songs."""
 
-    def __init__(self, spotify_auth: SpotifyClientCredentials, last_fm_auth: dict[str, str]):
+    def __init__(self, spotify_auth: SpotifyOAuth, last_fm_auth: dict[str, str]):
         self.db_config = SQLAlchemySyncConfig(connection_string="sqlite:///.tempoweave_song_cache.db")
-        self.spotify = api.Spotify(client_credentials_manager=spotify_auth)
+        self.spotify = api.Spotify(auth_manager=spotify_auth)
         self.youtube = api.YouTube()
         self.last_fm = api.LastFM(**last_fm_auth)
 
@@ -50,12 +50,9 @@ class Weaver:
     def get_recommendations(self, song: schema.Song, *, limit: int = 5) -> list[schema.Song]:
         """Get similar songs to the given song."""
 
-        if not (similar_tracks := self.last_fm.get_similar_tracks(song, limit=limit)):
-            raise RuntimeError(f"Could not find a Song on LastFM for '{song.title}' [{song.artist}]")
-        
         songs: list[schema.Song] = []
 
-        for similar in similar_tracks:
+        for similar in self.last_fm.get_similar_tracks(song, limit=limit):
             query = f"track:{similar['title']} artist:{similar['artist']}"
 
             if data := self.spotify.search(q=query, limit=1, type="track"):
@@ -65,18 +62,29 @@ class Weaver:
 
         return songs
 
-    def get_songs_from_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT) -> list[schema.Song]:
-        """Fetch all songs from a playlist."""
+    def get_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT) -> schema.Playlist:
+        """Fetch all info from a playlist."""
+        playlist_id = self.spotify.get_spotify_id(spotify_playlist_identity)
+        playlist_info = self.spotify.playlist(playlist_id)
+
+        if playlist_info is None:
+            raise RuntimeError(f"Could not find a Playlist for '{spotify_playlist_identity}'")
+        
+        playlist = schema.Playlist(
+            playlist_id=playlist_info["id"],
+            title=playlist_info["name"],
+            description=playlist_info["description"],
+            songs=[self.get_song(spotify_track_identity=t["track"]["id"]) for t in playlist_info["tracks"]["items"]],
+        )
+
+        return playlist
+
+    def set_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT, *, songs: list[schema.Song]) -> None:
+        """Define all the songs in this playlist."""
         playlist_id = self.spotify.get_spotify_id(spotify_playlist_identity)
         playlist = self.spotify.playlist(playlist_id)
 
         if playlist is None:
             raise RuntimeError(f"Could not find a Playlist for '{spotify_playlist_identity}'")
 
-        songs: list[schema.Song] = []
-
-        for playlist_item in playlist["tracks"]["items"]:
-            if track_id := playlist_item["track"]["id"]:
-                songs.append(self.get_song(spotify_track_identity=track_id))
-
-        return songs
+        self.spotify.playlist_replace_items(playlist_id=playlist_id, items=[s.spotify_uri for s in songs])

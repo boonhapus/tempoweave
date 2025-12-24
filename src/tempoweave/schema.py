@@ -89,6 +89,33 @@ class Song(Base):
         return round(number=v, ndigits=1)
 
 
+class Playlist(Base):
+    """Represents a playlist on Spotify."""
+
+    playlist_id: SpotifyIDT
+    """Spotify playlist ID."""
+
+    title: str
+    """Name of the playlist."""
+
+    description: str
+    """Description of the playlist."""
+
+    songs: list[Song]
+    """The tracks on the playlist."""
+
+    @pydantic.computed_field
+    @property
+    def spotify_uri(self) -> str:
+        """Spotify URI of the playlist."""
+        return f"spotify:playlist:{self.playlist_id}"
+
+    @property
+    def duration(self) -> pydantic.PositiveFloat:
+        """The track length in minutes."""
+        return sum(s.duration for s in self.songs)
+
+
 class TempoweavePlaylistSettings(Base):
     """Represents the type of tempo playlist to build."""
 

@@ -17,7 +17,7 @@ class LastFM(pylast.LastFMNetwork):
     #
 
     def get_similar_tracks(self, song: schema.Song, limit: int = 5) -> list[dict[str, Any]]:
-        """..."""
+        """Find similar tracks to the input song."""
         results = []
 
         try:
@@ -26,11 +26,12 @@ class LastFM(pylast.LastFMNetwork):
             for similar in track.get_similar(limit=limit):
                 if isinstance(similar.item, pylast.Track):
                     results.append({
+                        "musicbrainz_id": similar.item.get_mbid(),
                         "title": similar.item.get_title(),
                         "artist": similar.item.get_artist(),
                         "album": similar.item.get_album(),
                     })
-            
+
             if not results:
                 logger.warning(f"No similar tracks found on LastFM to '{song.title}' [{song.artist}]")
 
