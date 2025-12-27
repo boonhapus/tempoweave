@@ -5,6 +5,7 @@ import pathlib
 import tempfile
 import random
 
+from librosa.feature import rhythm
 import librosa
 import numpy as np
 import yt_dlp
@@ -64,6 +65,9 @@ class YouTube(yt_dlp.YoutubeDL):
 
             # SEARCH: "{artist} {title}"
             self.download([f"{track_info['artists'][0]['name']} {track_info['name']}"])
+
+            if not temp_mp3.exists():
+                return None
 
             # POST-PROCESS FOR TEMPO USING librosa.
             song_data, sampling_rate = librosa.load(path=temp_mp3, sr=22050)

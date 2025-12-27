@@ -99,7 +99,7 @@ class Song(Base):
     @pydantic.field_validator("duration")
     @classmethod
     def validate_limit_precision_to_one_decimal(cls, v: float) -> float:
-        return round(number=v, ndigits=1)
+        return round(number=v, ndigits=2)
 
 
 class Playlist(Base):

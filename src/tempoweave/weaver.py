@@ -35,15 +35,14 @@ class Weaver:
                 sa
                 .select(models.Song)
                 .where(
-                    sa.or_(
-                        models.Song.last_verified < (dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=30)),
-                        models.Song.musicbrainz_id.is_(None),
-                        models.Song.tempo.is_(None),
-                    )
+                    models.Song.track_id == track_id,
+                    models.Song.last_verified > (dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=30)),
+                    models.Song.musicbrainz_id.is_not(None),
+                    models.Song.tempo.is_not(None),
                 )
             )
 
-            if cached := song_repo.get_one_or_none(track_id=track_id, statement=q):
+            if cached := song_repo.get_one_or_none(statement=q):
                 return cached.to_schema()
 
             if (track := self.spotify.track(track_id)) is None:

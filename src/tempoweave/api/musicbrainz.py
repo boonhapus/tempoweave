@@ -1,6 +1,5 @@
 from typing import Any
 import logging
-import time
 
 import httpx
 import musicbrainzngs
@@ -39,7 +38,6 @@ class MusicBrainz(httpx.Client):
         info = {
             "title": track_info["name"],
             "artist": track_info["artists"][0]["name"],
-            "album": track_info["album"],
         }
 
         # 1. High Precision: ISRC (Global Standard)

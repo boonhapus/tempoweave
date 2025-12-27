@@ -59,7 +59,7 @@ def _(SpotifyOAuth, Weaver, os):
 
 
 @app.cell
-def _(weaver):
+def _():
     # THIS FLOW SHUFFLES A PLAYLIST BY FETCHING A RANDOM SONG ON IT, THEN REWRITING IT WITH SIMILAR SONGS
     import random
 
@@ -67,12 +67,12 @@ def _(weaver):
     _f = lambda choices: choices[0] if _t == "FIRST" else random.choice
     _n = "https://open.spotify.com/playlist/0baOrekhXPa0YpUKgrDhs9"
 
-    _p = weaver.get_playlist(spotify_playlist_identity=_n)
-    _c = _f(_p.songs)
-    _s = weaver.get_recommendations(_c, limit=24)
+    # _p = weaver.get_playlist(spotify_playlist_identity=_n)
+    # _c = _f(_p.songs)
+    # _s = weaver.get_recommendations(_c, limit=24)
 
-    weaver.set_playlist(spotify_playlist_identity=_p.playlist_id, songs=[_c, *_s])
-    weaver.get_playlist(spotify_playlist_identity=_p.playlist_id)
+    # weaver.set_playlist(spotify_playlist_identity=_p.playlist_id, songs=[_c, *_s])
+    # weaver.get_playlist(spotify_playlist_identity=_p.playlist_id)
     return
 
 
@@ -98,6 +98,15 @@ def _(weaver):
     {_t}
     """
     print(_q)
+    return
+
+
+@app.cell
+def _(weaver):
+    _n = "https://open.spotify.com/playlist/0baOrekhXPa0YpUKgrDhs9"
+    _p = weaver.get_playlist(spotify_playlist_identity=_n)
+
+    _p.songs
     return
 
 
