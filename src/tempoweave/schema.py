@@ -15,9 +15,9 @@ class Base(pydantic.BaseModel):
         from_attributes=True,
     )
 
-    def model_dump_no_extras(self) -> dict[str, Any]:
+    def model_dump_no_extras(self, **kw) -> dict[str, Any]:
         """Return a dictionary of the model's fields, excluding any extras."""
-        return {k: v for k, v in self.model_dump().items() if k in self.model_fields.keys()}
+        return {k: v for k, v in self.model_dump(**kw).items() if k in self.model_fields.keys()}
 
 
 class SpotifyAuthInfo(Base):
@@ -47,6 +47,9 @@ class Song(Base):
     track_id: SpotifyIDT
     """Spotify track ID."""
 
+    musicbrainz_id: str | None
+    """MusicBrainz track ID."""
+
     title: str
     """Song title."""
 
@@ -56,7 +59,7 @@ class Song(Base):
     album: str
     """Album the song is featured on."""
 
-    tempo: pydantic.PositiveInt
+    tempo: pydantic.PositiveInt | None
     """Tempo in BPM."""
 
     duration: pydantic.PositiveFloat
@@ -74,13 +77,23 @@ class Song(Base):
         """Spotify URI of the song."""
         return f"spotify:track:{self.track_id}"
     
+    @pydantic.computed_field
+    @property
+    def musicbrainz_url(self) -> str | None:
+        """MusicBrainz URL of the song."""
+        if self.musicbrainz_id is None:
+            return None
+        return f"https://musicbrainz.org/recording/{self.musicbrainz_id}"
+    
     # ==========
     # VALIDATORS
     # ==========
 
     @pydantic.field_validator("tempo", mode="before")
     @classmethod
-    def validate_round_precision_to_nearest_5(cls, v: float) -> float:
+    def validate_round_precision_to_nearest_5(cls, v: float | None) -> float | None:
+        if v is None:
+            return None
         return math.floor(v / 5) * 5
 
     @pydantic.field_validator("duration")

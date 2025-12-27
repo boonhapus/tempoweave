@@ -10,7 +10,9 @@ requires-python = ">=3.12"
 dependencies = [
     "advanced-alchemy>=1.8.2",
     "cryptography>=46.0.3",
+    "httpx>=0.28.1",
     "librosa>=0.11.0",
+    "musicbrainzngs>=0.7.1",
     "pydantic>=2.12.5",
     "pylast>=7.0.0",
     "spotipy>=2.25.2",

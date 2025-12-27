@@ -12,6 +12,9 @@ class SchemaMixin:
     """Mixin for pydantic.BaseModel schema conversion."""
     __schema__: type[schema.Base]
 
+    def to_dict(self, **kw) -> dict[str, Any]:
+        return self.to_schema().model_dump_no_extras(**kw)
+
     def to_schema(self) -> schema.Base:
         """Convert model to schema."""
         return self.__schema__.model_validate(obj=self)
@@ -52,6 +55,9 @@ class Song(Base):
 
     track_id: Mapped[types.SpotifyIDT] = mapped_column(sa.String, primary_key=True)
     """Spotify track ID."""
+
+    musicbrainz_id: Mapped[str | None] = mapped_column(sa.String)
+    """MusicBrainz track ID."""
 
     title: Mapped[str] = mapped_column(sa.String)
     """Song title."""

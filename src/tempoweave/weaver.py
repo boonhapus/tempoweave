@@ -1,8 +1,10 @@
 from typing import cast
+import datetime as dt
 import logging
 
 from advanced_alchemy.config import SQLAlchemySyncConfig
 from spotipy.oauth2 import SpotifyOAuth
+import sqlalchemy as sa
 
 from tempoweave import api, const, models, repo, schema, types
 
@@ -15,8 +17,9 @@ class Weaver:
     def __init__(self, spotify_auth: SpotifyOAuth, last_fm_auth: dict[str, str]):
         self.db_config = SQLAlchemySyncConfig(connection_string="sqlite:///.tempoweave_song_cache.db")
         self.spotify = api.Spotify(auth_manager=spotify_auth)
-        self.youtube = api.YouTube()
         self.last_fm = api.LastFM(**last_fm_auth)
+        self.mbrainz = api.MusicBrainz()
+        self.youtube = api.YouTube()
 
         with self.db_config.get_engine().begin() as conn:
             models.Base.metadata.create_all(bind=conn)
@@ -28,7 +31,19 @@ class Weaver:
         with self.db_config.get_session() as sess:
             song_repo = repo.SongRepository(session=sess)
 
-            if cached := song_repo.get_one_or_none(track_id=track_id):
+            q = (
+                sa
+                .select(models.Song)
+                .where(
+                    sa.or_(
+                        models.Song.last_verified < (dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=30)),
+                        models.Song.musicbrainz_id.is_(None),
+                        models.Song.tempo.is_(None),
+                    )
+                )
+            )
+
+            if cached := song_repo.get_one_or_none(track_id=track_id, statement=q):
                 return cached.to_schema()
 
             if (track := self.spotify.track(track_id)) is None:
@@ -36,6 +51,7 @@ class Weaver:
 
             song = models.Song.validate_schema({
                 "track_id": track["id"],
+                "musicbrainz_id": self.mbrainz.get_musicbrainz_id(track),
                 "title": track["name"],
                 "artist": track["artists"][0]["name"],
                 "album": track["album"]["name"],

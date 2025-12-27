@@ -26,7 +26,8 @@ class YouTube(yt_dlp.YoutubeDL):
         params = {
             "default_search": "ytsearch1:",
             "format": "bestaudio/best",
-            "force_keyframe_at_cuts": False,  # Prevent downloading extra data for accurate cutting.
+            "force_keyframe_at_cuts": True,
+            "ignoreerrors": True,
             "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
         }
 
@@ -35,13 +36,13 @@ class YouTube(yt_dlp.YoutubeDL):
 
         super().__init__(params)
 
-    def estimate_tempo(self, track_info: dict[str, Any], quiet: bool = False) -> int:
+    def estimate_tempo(self, track_info: dict[str, Any], quiet: bool = True) -> int | None:
         """Download the song from YT and estimate its tempo."""
-        MIN_SEC_FOR_TEMPO_ESTIMATION = 30
+        MIN_SEC_FOR_TEMPO_ESTIMATION = 45
 
         # Calculate the boundaries for a song sample.
         dur = (track_info["duration_ms"] / const.ONE_MINUTE_IN_MILLISECONDS)
-        beg = random.uniform(dur * 0.2, dur - MIN_SEC_FOR_TEMPO_ESTIMATION)
+        beg = int(random.uniform(dur * 0.2, dur - MIN_SEC_FOR_TEMPO_ESTIMATION))
 
         # Use track_info.id for a unique, stable filename
         temp_mp3 = pathlib.Path(f"{tempfile.gettempdir()}/{track_info['id']}-sample.mp3")
@@ -53,6 +54,8 @@ class YouTube(yt_dlp.YoutubeDL):
             self.params.update({
                 "outtmpl": temp_mp3.as_posix().replace(".mp3", ".%(ext)s"),
                 "quiet": quiet,
+                "noprogress": quiet,
+                "no_warnings": quiet,
                 "download_ranges": lambda *a: [{"start_time": beg, "end_time": beg + MIN_SEC_FOR_TEMPO_ESTIMATION}],
             })
 
@@ -63,14 +66,16 @@ class YouTube(yt_dlp.YoutubeDL):
             self.download([f"{track_info['artists'][0]['name']} {track_info['name']}"])
 
             # POST-PROCESS FOR TEMPO USING librosa.
-            song_data, sampling_rate = librosa.load(path=temp_mp3)
-            tempo, _ = librosa.beat.beat_track(y=song_data, sr=sampling_rate)
-            tempo = tempo.item() if isinstance(tempo, np.ndarray) else tempo
-            return int(tempo)
+            song_data, sampling_rate = librosa.load(path=temp_mp3, sr=22050)
+            envelope = librosa.onset.onset_strength(y=song_data, sr=sampling_rate)
+            estimate = librosa.feature.rhythm.tempo(onset_envelope=envelope, sr=sampling_rate, aggregate=None)
+            tempo = int(round(np.median(estimate)))
+
+            return tempo
 
         except Exception as e:
             logger.exception(f"Failed to estimate tempo for {track_info.get('id')}: {e}")
-            return 0
+            return None
         
         finally:
             self.params = original_params
