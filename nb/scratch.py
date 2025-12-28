@@ -9,7 +9,7 @@ def _():
     import os
 
     import marimo as mo
-    return (os,)
+    return mo, os
 
 
 @app.cell
@@ -103,6 +103,115 @@ def _(weaver):
     _p = weaver.get_playlist(spotify_playlist_identity=_n)
 
     _p.songs
+    return
+
+
+@app.cell
+def _(mo):
+    # Song selection mode dropdown
+    song_selection_mode = mo.ui.dropdown(
+        options=["FIRST", "RANDOM"],
+        value="RANDOM",
+        label="Song Selection Mode",
+    )
+
+    # Duration slider (in minutes, 1-180 range)
+    duration = mo.ui.slider(
+        start=1,
+        stop=180,
+        value=30,
+        step=1,
+        label="Duration (minutes)",
+        show_value=True,
+    )
+
+    # Tempo range slider
+    tempo = mo.ui.range_slider(start=35, stop=250, step=1, value=[100, 160], label="Select Tempo Range (BPM)", show_value=True)
+
+    # Min tempo slider
+    min_tempo = mo.ui.slider(
+        start=60,
+        stop=200,
+        value=100,
+        step=1,
+        label="Min Tempo (BPM)",
+        show_value=True,
+    )
+
+    # Max tempo slider
+    max_tempo = mo.ui.slider(
+        start=60,
+        stop=200,
+        value=140,
+        step=1,
+        label="Max Tempo (BPM)",
+        show_value=True,
+    )
+
+    # Easing function dropdown
+    easing_function = mo.ui.dropdown(
+        options=["linear"],
+        value="linear",
+        label="Easing Function",
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    class ValidatedText:
+        """..."""
+
+        def __init__(self, label, validate_fn):
+            self.validate_fn = validate_fn
+            self.feedback = ""
+            self.text_area = mo.ui.text(
+                label=label,
+                debounce=False,
+                on_change=self._handle_change
+            )
+
+        def _handle_change(self, new_value):
+            print("handling")
+
+            if matched := self.validate_fn(new_value):
+                self.value = new_value
+                self.feedback = mo.md("Success!").style({"color": "green"})
+            else:
+                self.feedback = mo.md(f"Please enter a value valid, got {new_value}").style({"color": "red"})
+
+            print(matched)
+
+        @property
+        def value(self):
+            return self.text_area.value
+
+        def _display_(self):
+            """..."""
+            return mo.vstack([self.text_area, self.feedback])
+    return (ValidatedText,)
+
+
+@app.cell
+def _(ValidatedText):
+    import re
+
+    zip_validator = ValidatedText(
+        label="Zip Code",
+        validate_fn=lambda v: False,
+    )
+    return (zip_validator,)
+
+
+@app.cell
+def _(zip_validator):
+    zip_validator
+    return
+
+
+@app.cell
+def _(zip_validator):
+    zip_validator.value
     return
 
 
