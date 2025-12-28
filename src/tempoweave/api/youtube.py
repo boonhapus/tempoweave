@@ -5,12 +5,10 @@ import pathlib
 import tempfile
 import random
 
-from librosa.feature import rhythm
 import librosa
-import numpy as np
 import yt_dlp
 
-from tempoweave import const
+from tempoweave import const, types
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +21,10 @@ class YouTube(yt_dlp.YoutubeDL):
     #   from the YouTube service instead of interacting with it in memory.
     #
 
-    def __init__(self, ffmpeg_location: pathlib.Path | None = None):
+    def __init__(self, browser_cookie_for_age_verify: types.BrowserT, ffmpeg_location: pathlib.Path | None = None):
         params = {
             "default_search": "ytsearch1:",
+            "cookiesfrombrowser": (browser_cookie_for_age_verify,),
             "format": "bestaudio/best",
             "force_keyframe_at_cuts": True,
             "ignoreerrors": True,
@@ -72,10 +71,9 @@ class YouTube(yt_dlp.YoutubeDL):
             # POST-PROCESS FOR TEMPO USING librosa.
             song_data, sampling_rate = librosa.load(path=temp_mp3, sr=22050)
             envelope = librosa.onset.onset_strength(y=song_data, sr=sampling_rate)
-            estimate = librosa.feature.rhythm.tempo(onset_envelope=envelope, sr=sampling_rate, aggregate=None)
-            tempo = int(round(np.median(estimate)))
+            tempo, beats = librosa.beat.beat_track(onset_envelope=envelope, sr=sampling_rate)
 
-            return tempo
+            return int(round(float(tempo)))
 
         except Exception as e:
             logger.exception(f"Failed to estimate tempo for {track_info.get('id')}: {e}")

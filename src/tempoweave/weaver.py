@@ -14,16 +14,16 @@ logger = logging.getLogger(__name__)
 class Weaver:
     """A coordinator of songs."""
 
-    def __init__(self, spotify_auth: SpotifyOAuth, last_fm_auth: dict[str, str]):
+    def __init__(self, spotify_auth: SpotifyOAuth, last_fm_auth: dict[str, str], browser: types.BrowserT):
         self.db_config = SQLAlchemySyncConfig(connection_string="sqlite:///.tempoweave_song_cache.db")
         self.spotify = api.Spotify(auth_manager=spotify_auth)
         self.last_fm = api.LastFM(**last_fm_auth)
         self.mbrainz = api.MusicBrainz()
-        self.youtube = api.YouTube()
+        self.youtube = api.YouTube(browser_cookie_for_age_verify=browser)
 
         with self.db_config.get_engine().begin() as conn:
             models.Base.metadata.create_all(bind=conn)
-    
+
     def get_song(self, spotify_track_identity: types.SpotifyIdentityT) -> schema.Song:
         """Get a song."""
         track_id = self.spotify.get_spotify_id(spotify_track_identity)
@@ -83,7 +83,7 @@ class Weaver:
 
         if playlist_info is None:
             raise RuntimeError(f"Could not find a Playlist for '{spotify_playlist_identity}'")
-        
+
         playlist = schema.Playlist(
             playlist_id=playlist_info["id"],
             title=playlist_info["name"],
@@ -96,9 +96,18 @@ class Weaver:
     def set_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT, *, songs: list[schema.Song]) -> None:
         """Define all the songs in this playlist."""
         playlist_id = self.spotify.get_spotify_id(spotify_playlist_identity)
-        playlist = self.spotify.playlist(playlist_id)
+        playlist_info = self.spotify.playlist(playlist_id)
 
-        if playlist is None:
+        if playlist_info is None:
             raise RuntimeError(f"Could not find a Playlist for '{spotify_playlist_identity}'")
 
         self.spotify.playlist_replace_items(playlist_id=playlist_id, items=[s.spotify_uri for s in songs])
+
+        playlist = schema.Playlist(
+            playlist_id=playlist_info["id"],
+            title=playlist_info["name"],
+            description=playlist_info["description"],
+            songs=[self.get_song(spotify_track_identity=t["track"]["id"]) for t in playlist_info["tracks"]["items"]],
+        )
+
+        return playlist

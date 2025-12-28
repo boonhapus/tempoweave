@@ -132,6 +132,9 @@ class Playlist(Base):
 class TempoweavePlaylistSettings(Base):
     """Represents the type of tempo playlist to build."""
 
+    song_selection_mode: Literal["FIRST", "RANDOM"] = "RANDOM"
+    """Which song to choose to base the playlist off of."""
+
     duration: pydantic.PositiveInt
     """How long the playlist should run for in minutes."""
 
@@ -155,12 +158,17 @@ class TempoweavePlaylistSettings(Base):
 
         parts = v.replace(" ", "").split(";")
 
-        if len(parts) == 4:
-            return dict(zip(("duration", "min_tempo", "max_tempo", "easing_function"), parts))
-        elif len(parts) == 3:
-            return dict(zip(("duration", "min_tempo", "max_tempo"), parts))
+        if len(parts) == 5:
+            return dict(zip(("song_selection_mode", "duration", "min_tempo", "max_tempo", "easing_function"), parts))
+        elif len(parts) == 4:
+            return dict(zip(("song_selection_mode", "duration", "min_tempo", "max_tempo"), parts))
         else:
             raise ValueError("This playlist must define at least duration; min_tempo; max_tempo")
+    
+    @pydantic.field_validator("song_selection_mode", mode="before")
+    @classmethod
+    def validate_selection_mode(cls, v: str) -> str:
+        return v.upper()
 
     @pydantic.field_validator("duration", mode="before")
     @classmethod

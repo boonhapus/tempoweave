@@ -809,15 +809,6 @@ wheels = [
 ]
 
 [[package]]
-name = "musicbrainzngs"
-version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0a/67/3e74ae93d90ceeba72ed1a266dd3ca9abd625f315f0afd35f9b034acedd1/musicbrainzngs-0.7.1.tar.gz", hash = "sha256:ab1c0100fd0b305852e65f2ed4113c6de12e68afd55186987b8ed97e0f98e627", size = 117469, upload-time = "2020-01-11T17:38:47.581Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/fd/cef7b2580436910ccd2f8d3deec0f3c81743e15c0eb5b97dde3fbf33c0c8/musicbrainzngs-0.7.1-py2.py3-none-any.whl", hash = "sha256:e841a8f975104c0a72290b09f59326050194081a5ae62ee512f41915090e1a10", size = 25289, upload-time = "2020-01-11T17:38:45.469Z" },
-]
-
-[[package]]
 name = "narwhals"
 version = "2.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1512,12 +1503,12 @@ dependencies = [
     { name = "cryptography" },
     { name = "httpx" },
     { name = "librosa" },
-    { name = "musicbrainzngs" },
     { name = "pydantic" },
     { name = "pylast" },
     { name = "spotipy" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
+    { name = "tenacity" },
     { name = "yt-dlp" },
 ]
 
@@ -1534,12 +1525,12 @@ requires-dist = [
     { name = "cryptography", specifier = ">=46.0.3" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "librosa", specifier = ">=0.11.0" },
-    { name = "musicbrainzngs", specifier = ">=0.7.1" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pylast", specifier = ">=7.0.0" },
     { name = "spotipy", specifier = ">=2.25.2" },
     { name = "sqlalchemy", specifier = ">=2.0" },
     { name = "sqlglot", specifier = ">=28.5.0" },
+    { name = "tenacity", specifier = ">=9.1.2" },
     { name = "yt-dlp", specifier = ">=2025.12.8" },
 ]
 
@@ -1548,6 +1539,15 @@ dev = [
     { name = "duckdb", specifier = ">=1.4.3" },
     { name = "marimo", specifier = ">=0.18.4" },
     { name = "polars", extras = ["pyarrow"], specifier = ">=1.36.1" },
+]
+
+[[package]]
+name = "tenacity"
+version = "9.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
 ]
 
 [[package]]

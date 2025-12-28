@@ -28,7 +28,7 @@ def _():
     from spotipy.oauth2 import SpotifyOAuth
 
     from tempoweave.weaver import Weaver
-    from tempoweave.schema import Song
+    from tempoweave.schema import Song, TempoweavePlaylistSettings
     from tempoweave.__project__ import __version__
     return SpotifyOAuth, Weaver
 
@@ -52,27 +52,23 @@ def _(SpotifyOAuth, Weaver, os):
         "api_secret": os.environ["LAST_FM_API_SECRET"],
     }
 
-    # MusicBrainz? MusicBrainz Labs?
-
-    weaver = Weaver(spotify_auth=spot_creds, last_fm_auth=last_creds)
+    weaver = Weaver(spotify_auth=spot_creds, last_fm_auth=last_creds, browser="firefox")
     return (weaver,)
 
 
 @app.cell
-def _():
+def _(weaver):
     # THIS FLOW SHUFFLES A PLAYLIST BY FETCHING A RANDOM SONG ON IT, THEN REWRITING IT WITH SIMILAR SONGS
     import random
 
-    _t = "FIRST"
-    _f = lambda choices: choices[0] if _t == "FIRST" else random.choice
-    _n = "https://open.spotify.com/playlist/0baOrekhXPa0YpUKgrDhs9"
+    _n = "https://open.spotify.com/playlist/2C6Jr9OBdUXWgHkjQix0tH?si=d284f295f8d34d57"
 
-    # _p = weaver.get_playlist(spotify_playlist_identity=_n)
-    # _c = _f(_p.songs)
-    # _s = weaver.get_recommendations(_c, limit=24)
+    _p = weaver.get_playlist(spotify_playlist_identity=_n)
+    _c = random.choice(_p.songs)
+    _s = weaver.get_recommendations(_c, limit=24)
 
-    # weaver.set_playlist(spotify_playlist_identity=_p.playlist_id, songs=[_c, *_s])
-    # weaver.get_playlist(spotify_playlist_identity=_p.playlist_id)
+    weaver.set_playlist(spotify_playlist_identity=_p.playlist_id, songs=[_c, *_s])
+    weaver.get_playlist(spotify_playlist_identity=_p.playlist_id)
     return
 
 
