@@ -68,7 +68,7 @@ class Song(Base):
     genre: str | None = None
     """Primary genre of the song."""
 
-    last_verified: dt.datetime = pydantic.Field(default_factory=lambda: dt.datetime.now(tz=dt.timezone.utc))
+    last_verified: pydantic.AwareDatetime = pydantic.Field(default_factory=lambda: dt.datetime.now(tz=dt.timezone.utc))
     """When this song was last verified against Spotify's API."""
 
     @pydantic.computed_field
@@ -102,6 +102,16 @@ class Song(Base):
         return round(number=v, ndigits=2)
 
 
+class PlaylistSong(Song):
+    """Represents a Song on a Playlist."""
+
+    order: int
+    """The order in which this track was added to the playlist."""
+
+    added_at: dt.datetime
+    """The time (in UTC) when the track was added to the playlist."""
+
+
 class Playlist(Base):
     """Represents a playlist on Spotify."""
 
@@ -114,7 +124,7 @@ class Playlist(Base):
     description: str
     """Description of the playlist."""
 
-    songs: list[Song]
+    songs: list[PlaylistSong]
     """The tracks on the playlist."""
 
     @pydantic.computed_field
@@ -123,10 +133,17 @@ class Playlist(Base):
         """Spotify URI of the playlist."""
         return f"spotify:playlist:{self.playlist_id}"
 
+    @pydantic.computed_field
     @property
     def duration(self) -> pydantic.PositiveFloat:
         """The track length in minutes."""
         return sum(s.duration for s in self.songs)
+
+    @pydantic.computed_field
+    @property
+    def last_updated(self) -> pydantic.AwareDatetime:
+        """The last time the playlist had a song added to it."""
+        return max(s.added_at for s in self.songs)
 
 
 class TempoweavePlaylistSettings(Base):

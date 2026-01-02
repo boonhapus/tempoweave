@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class RetryRateLimitTransport(httpx.HTTPTransport):
     """A simple rate limiter."""
 
-    RETRYABLE_EXCEPTIONS = (
+    RETRYABLE_EXCEPTIONS: tuple[type[httpx.HTTPError], ...] = (
         httpx.ReadError,
     )
 
@@ -19,25 +19,25 @@ class RetryRateLimitTransport(httpx.HTTPTransport):
         self.delay = 1.0 / requests_per_second
         self.last_call = 0.0
         self.lock = Lock()
-        self.retries = 3
+        self.retries = 5
         self.retry_backoff = 0.5
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         """Implement the rate limit."""
-        for attempt in range(self.retries + 1):
+        for attempt in range(1, self.retries + 1):
             self._apply_rate_limit()
 
             try:
                 return super().handle_request(request)
 
             except self.RETRYABLE_EXCEPTIONS as e:
-                logger.warning(f"Exception trying {request.method} #{attempt + 1} {request.url}, retrying..")
+                last_exception = e
+                logger.warning(f"{type(e).__name__} >> {request.method} #{attempt} {request.url}, retrying..")
 
                 if attempt < self.retries:
                     time.sleep(self.retry_backoff * (2 ** attempt))
-                    continue
 
-                raise e
+        raise last_exception
 
     def _apply_rate_limit(self) -> None:
         with self.lock:

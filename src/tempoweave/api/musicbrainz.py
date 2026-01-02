@@ -124,7 +124,7 @@ class MusicBrainz(httpx.Client):
         **lucene_query_items,
     ) -> httpx.Response:
         """
-        The query field supports the full Lucene Search syntax.
+        The **lucene_query_items supports the full Lucene Search syntax.
 
         Further reading:
           https://lucene.apache.org/core/7_7_2/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#package.description
@@ -158,7 +158,7 @@ class MusicBrainz(httpx.Client):
 
             # TRACK MISSING KEY DATA
             except (IndexError, KeyError):
-                logger.warning(f"Could not fetch MBID based on ISRC for '{spotify_title}' [{spotify_artist}]")
+                logger.warning(f"Could not find MusicBrainzID from ISRC for '{spotify_title}' [{spotify_artist}]")
 
         # 2. Fallback: Metadata Search
         if mbid is None:
@@ -169,7 +169,7 @@ class MusicBrainz(httpx.Client):
                 mbid = d["recordings"][0]["id"]
 
             # TRACK MISSING KEY DATA
-            except (KeyError, IndexError):
-                logger.warning(f"Could not fetch MBID based on Query for '{spotify_title}' [{spotify_artist}]")
+            except (IndexError, KeyError):
+                logger.warning(f"Could not find MusicBrainzID from Query for '{spotify_title}' [{spotify_artist}]")
 
         return mbid

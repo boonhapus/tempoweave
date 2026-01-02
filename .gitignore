@@ -29,3 +29,6 @@ wheels/
 # IDE
 .vscode/
 .idea/
+
+# KEEP THE DATA FOLDER THOUGH.
+!data/*

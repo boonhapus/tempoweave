@@ -14,8 +14,14 @@ logger = logging.getLogger(__name__)
 class Weaver:
     """A coordinator of songs."""
 
-    def __init__(self, spotify_auth: SpotifyOAuth, last_fm_auth: dict[str, str], browser: types.BrowserT):
-        self.db_config = SQLAlchemySyncConfig(connection_string="sqlite:///.tempoweave_song_cache.db")
+    def __init__(
+        self,
+        spotify_auth: SpotifyOAuth,
+        last_fm_auth: dict[str, str],
+        browser: types.BrowserT,
+        database_fp: str = ".tempoweave_song_cache.db",
+    ):
+        self.db_config = SQLAlchemySyncConfig(connection_string=f"sqlite:///{database_fp}")
         self.spotify = api.Spotify(auth_manager=spotify_auth)
         self.last_fm = api.LastFM(**last_fm_auth)
         self.mbrainz = api.MusicBrainz()
@@ -88,12 +94,21 @@ class Weaver:
             playlist_id=playlist_info["id"],
             title=playlist_info["name"],
             description=playlist_info["description"],
-            songs=[self.get_song(spotify_track_identity=t["track"]["id"]) for t in playlist_info["tracks"]["items"]],
+            songs=[
+                schema.PlaylistSong.model_validate(
+                    {
+                        **self.get_song(spotify_track_identity=t["track"]["id"]).model_dump_no_extras(),
+                        "order": idx,
+                        "added_at": t["added_at"],
+                    },
+                )
+                for idx, t in enumerate(playlist_info["tracks"]["items"], start=1)
+            ],
         )
 
         return playlist
 
-    def set_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT, *, songs: list[schema.Song]) -> None:
+    def set_playlist(self, spotify_playlist_identity: types.SpotifyIdentityT, *, songs: list[schema.Song]) -> schema.Playlist:
         """Define all the songs in this playlist."""
         playlist_id = self.spotify.get_spotify_id(spotify_playlist_identity)
         playlist_info = self.spotify.playlist(playlist_id)
@@ -107,7 +122,16 @@ class Weaver:
             playlist_id=playlist_info["id"],
             title=playlist_info["name"],
             description=playlist_info["description"],
-            songs=[self.get_song(spotify_track_identity=t["track"]["id"]) for t in playlist_info["tracks"]["items"]],
+            songs=[
+                schema.PlaylistSong.model_validate(
+                    {
+                        **self.get_song(spotify_track_identity=t["track"]["id"]).model_dump_no_extras(),
+                        "order": idx,
+                        "added_at": t["added_at"],
+                    },
+                )
+                for idx, t in enumerate(playlist_info["tracks"]["items"], start=1)
+            ]
         )
 
         return playlist

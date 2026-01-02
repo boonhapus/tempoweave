@@ -30,4 +30,5 @@ dev = [
     "marimo>=0.18.4",
     "duckdb>=1.4.3",
     "polars[pyarrow]>=1.36.1",
+    "tzdata>=2025.3",
 ]
